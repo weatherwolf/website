@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import time
 from selenium.webdriver.chrome.options import Options
+import openpyxl
 
 
 
@@ -84,27 +85,29 @@ def VATNumberValid(VATNumber):
 def MakeDatabase(inputfile):
     btwNummers = []
     outputs = []
-    csv_file = "test.csv" #xlsx file compressed to an csv file
     database_down_country = "none"
     countryList = np.array(["AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "EL", "ES", "FI", "FR", "HR", "HU", "IE", "IT", "LT", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK", "XI"])
 
-    read_file = pd.read_excel (fr'/home/wolf/Documents/VAT Number/{inputfile}')
-    read_file.to_csv(fr'/home/wolf/Documents/VAT Number/{csv_file}', index = None, header=True)
-
-    with open(f'{csv_file}') as csv_file:
-            for vatNumber in csv_file:
-                
-                if database_down_country in vatNumber:
-                    btwNummers.append(str(vatNumber.strip('\n')))
-                    outputs.append("DATABASE DOWN")
-                else:
-                    output = VATNumberValid(vatNumber)
-                    while (output == f"{errorMessage}"):
-                        output = VATNumberValid(vatNumber) #sometimes site wont load, so run the same number again until other output
-                    btwNummers.append(str(vatNumber.strip('\n')))
-                    outputs.append(output)
-                    if output == "DATABASE DOWN":
-                        for country in countryList:
-                            if country in vatNumber:
-                                database_down_country = country
+    wb = openpyxl.load_workbook(fr'input/{inputfile}')
+    ws = wb.active
+    
+    for row in ws.rows:
+        for cell in row:
+            if cell.value is None:
+                continue
+            vatNumber = cell.value
+            print(vatNumber)    
+            if database_down_country in vatNumber:
+                btwNummers.append(str(vatNumber.strip('\n')))
+                outputs.append("DATABASE DOWN")
+            else:
+                output = VATNumberValid(vatNumber)
+                while (output == f"{errorMessage}"):
+                    output = VATNumberValid(vatNumber) #sometimes site wont load, so run the same number again until other output
+                btwNummers.append(str(vatNumber.strip('\n')))
+                outputs.append(output)
+                if output == "DATABASE DOWN":
+                    for country in countryList:
+                        if country in vatNumber:
+                            database_down_country = country
     return pd.DataFrame(data={"VAT NUMBER" : btwNummers, "OUTPUT": outputs})
